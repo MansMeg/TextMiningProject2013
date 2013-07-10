@@ -22,14 +22,19 @@ from lxml import etree
 from urllib import urlopen
 import csv
 
+
+
 # Ladda ner XML-filer från riksdagen och sparar som txt.
 # URL som innehåller information om vad som kn laddas ned.
-starturl = "http://data.riksdagen.se/dokumentlista/?rm=&typ=mot&d=&ts=&sn=&parti=&iid=&bet=&org=&kat=&sz=10&sort=c&utformat=xml&termlista=&p=1"
-os.chdir("/Users/mansmagnusson/Desktop/Text Mining/Project/TextMiningProject2013")
+starturl = "http://data.riksdagen.se/dokumentlista/?rm=&typ=mot&d=&ts=&sn=&parti=&iid=&bet=&org=&kat=&sz=200&sort=c&utformat=xml&termlista=&p=1"
+project_path = "/Users/mansmagnusson/Desktop/Text Mining/Project/TextMiningProject2013"
+os.chdir(project_path)
 csvfile = 'Data/Motioner.csv'
 links_to_download_file = 'Data/links_to_download_file.txt'
-get_from_xml = ["dok_id","typ","subtyp","datum","titel","undertitel","dokument_url_text"]
+get_from_xml = ["id","dok_id","typ","datum","dokument_url_text"]
 url_text_xml = "dokument_url_text"
+
+runfile(project_path+r'/Code/functions.py', wdir=project_path)
 
 # Create files
 if not os.path.exists(csvfile):
@@ -41,50 +46,7 @@ if not os.path.exists(csvfile):
 if not os.path.exists(links_to_download_file):
     to_dl_file = open(links_to_download_file, 'a').close()
 
-
-# Loop över sidor (som uppdateras)
-xmldoc = urlopen(starturl).read()
-xmltree = etree.fromstring(xmldoc)
-sidor_tot = xmltree.xpath('/dokumentlista/@sidor')[0]
-sidor_tot = 3
-
-url = starturl
-pagecnt = 1
-while(pagecnt <= sidor_tot):
-    print str(pagecnt) + " of " + str(sidor_tot)
-    pagecnt += 1 
-    # Each page with data
-    xmldoc = urlopen(url).read()
-    xmltree = etree.fromstring(xmldoc)
-    sida_no = xmltree.xpath('/dokumentlista/@sida')[0]
-    #    if sida_no != str(pagecnt):
-    #        print "ERROR: sida_no = " + str(sida_no) + " and pagecnt = " + str(pagecnt)
-    #        break
-    next_url = xmltree.xpath('/dokumentlista/@nasta_sida') # Parse the dokument files
-    xmldocs = xmltree.xpath('/dokumentlista/dokument')
-    # Create data lines
-    xmldata = []
-    list_to_download = []
-    for doc in enumerate(xmldocs):
-        # Create data line to csv-file
-        nodelist = []
-        for node in get_from_xml:
-            nodelist.append(doc[1].xpath(node)[0].text)
-        xmldata.append(nodelist)
-        # Create list with files to download
-        list_to_download.append(doc[1].xpath(url_text_xml)[0].text)
-    with open(csvfile, 'a') as open_csvfile:
-        csvwriter = csv.writer(open_csvfile)
-        for line in xmldata:
-            csvwriter.writerow(line)
-        open_csvfile.close()
-    with open(links_to_download_file, 'a') as dl_file:
-        for txtfile in list_to_download:
-            dl_file.write(txtfile + "\n")
-        dl_file.close()
-    # Enumerate pagecnt and change url
-    url = next_url[0]
-
+download_riksdagen(starturl)
     
 
 # Skapa en textfil som innehåller informationen från texterna csv-format
