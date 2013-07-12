@@ -11,7 +11,13 @@ Created on Wed Jul 10 21:41:12 2013
 
 # Make class
 class RiksdagenApi():
-    """Class to get data from Riksdagens API"""
+    """Class to get data from Riksdagens API
+    Methods:
+    set_query : set different values for the query to Riksdagens API
+    set_nodes_to_download : set which nodes in the XML to download as Metadata
+    download_metadata : Download metadata in xml nodes to csv-file
+    download_txt_files : Download text data as txt-filers in a given directory
+    """
     def __init__(self,data_typ=None):
         from urllib import urlopen
         from lxml import etree
@@ -21,14 +27,15 @@ class RiksdagenApi():
               "http://data.riksdagen.se/anforandelista/",
               "http://data.riksdagen.se/voteringlista/",
               "http://data.riksdagen.se/personlista"]
-        searchsize="sz"
+        searchsize = "sz"
+        outformat = "utformat"
+        self.class_status=False        
         
         if data_typ in typer:
             self.typ = data_typ
             self.baseurl = urls[typer.index(data_typ)]
         else:
-            print "Korrekt värde för 'data_typ' saknas ('"+str(data_typ)+"' angivet)"+".\nMöjliga alternativ är:\n"+",\n".join(typer)
-            return
+            return "Korrekt värde för 'data_typ' saknas ('"+str(data_typ)+"' angivet)"+".\nMöjliga alternativ är:\n"+",\n".join(typer)
         
         # Download the homepage and query names
         baseHTML = etree.HTML(urlopen(self.baseurl).read())
@@ -40,59 +47,138 @@ class RiksdagenApi():
                 self.qnames_description.append(desc.text)
         
         # Set inital values
-        self.set_query("sz","1")
-        self.set_query("utformat","xml")
+        self.set_query(searchsize,"1")
+        self.set_query(outformat,"xml")
         
         # Get xml nodes
-        xmltree = etree.fromstring(urlopen(self.create_query_url()).read())
+        all_nodes = self.get_xml()
+        self.all_nodes = []
+        for node in all_nodes:
+            self.all_nodes.append(node.tag)
+        self.nodes_to_download = ["dok_id","anforande_nummer"]
+        
+        # Information
+        self.baseinfo = "Working RiksdagenApi class\nTyp: " + self.typ        
+        
+        # Define wether class is correct
+        self.class_status=True
+    
+    # nodes_to_choose = "anforandetext" url = "http://data.riksdagen.se/anforande/H009131-7"
+    def get_xml(self,nodes_to_choose="*",url=None):
+        from urllib import urlopen
+        from lxml import etree
+        
+        if type(nodes_to_choose) == type(str()):
+            nodes_to_choose = [nodes_to_choose]
+        if url==None:
+            url = self.create_query_url()
+        # Get the XML
+        xmltree = etree.fromstring(urlopen(url).read())
         if self.typ=="anförande":
-            nodes = xmltree.xpath("//anforande/*") # Fixa detta mer allmännt
+            base = "//anforande/"
+            nodes = xmltree.xpath("|".join([base + s for s in nodes_to_choose]))
         else: 
-            print "No nodes could be found!"
+            print "The nodes could not be found!"
             return
-        self.nodes = []
-        for node in nodes:
-            self.nodes.append(node.tag)         
-        
+        return nodes
+    
     def set_query(self,qname,value):
+        """Method set_query(qname,value)
+        str,str -> None
+        Set query to identify object to download from Riksdagen
+        qname: set query variable (see class.__repr__)
+        value: set query variable value (see riksdagens webbplats)
+        """
         self.qnames_values[self.qnames.index(qname)] = str(value)
+        
+    def set_nodes_to_download(self,nodes):
+        """Method set_nodes_to_download(nodes)
+        list of str -> None
+        Choose which nodes to download with method download_metadata.
+        nodes: which nodes that should be downloaded (see class for all possibilities)   
+        """
+        if nodes=="all":
+            self.nodes_to_download = self.all_nodes
+        else: 
+            self.nodes_to_download = nodes
     
-    def show_query(self):
-        print "Query:"
-        for i in enumerate(self.qnames):
-            print self.qnames_description[i[0]] + " (" + self.qnames[i[0]] + ")\t"+ self.qnames_values[i[0]]
-
+    def __repr__(self):
+        if self.class_status==True:
+            print self.baseinfo
+            print "Query:\n"
+            for i in enumerate(self.qnames):
+                print self.qnames_description[i[0]] + " (" + self.qnames[i[0]] + ")\t"+ self.qnames_values[i[0]]
+            print "\nSamtlig metadata: \n" + ", ".join(self.all_nodes)
+            print "\nMetadata att ladda ner: \n" + ", ".join(self.nodes_to_download)
+            return ""
+        else:
+            return "Not a working RiksdagenApi class"
+    
     def create_query_url(self):
-        temp_list = []
-        for i in range(len(self.qnames)):
-            temp_list.append(self.qnames[i] + "=" + self.qnames_values[i])
+        temp_list = [s[0] + "=" + s[1] for s in zip(self.qnames,self.qnames_values)]
         return self.baseurl+"?"+"&".join(temp_list)
-
-### To do later on
-
-http://data.riksdagen.se/anforandelista/?rm=&anftyp=&d=&ts=&parti=&iid=&sz=1&utformat=xml
-
-test.utformat
-# To do:
-    def download_metadata(filename="temp.csv"):
-        
-self.create_query_url()        
-        
-test = RiksdagenApi("test")
-test = RiksdagenApi("anförande")        
-test.show_query()
-test.set_query("sz",100)
-test.show_query()
-test
-
-test = RiksdagenApi("test")
-
-    def add(self, x):
-        self.data.append(x)
-    def addtwice(self, x):
-        self.add(x)
-        self.add(x)
     
+    def download_metadata(self,filename="/temp.csv"):
+        """Method download_metadata(filename)
+        str -> file
+        filename: the name of the file (including '/' and '.csv') were to save metadata
+        """
+        from csv import writer
+        from os import getcwd
+        xml_nodes = self.get_xml(self.nodes_to_download)
+
+        with open(getcwd()+filename, 'w') as open_csvfile:
+            csvwriter = writer(open_csvfile)
+            csvwriter.writerow(self.nodes_to_download)
+            cnt = 0
+            for i in range(len(xml_nodes)//len(self.nodes_to_download)):
+                line = []
+                for j in range(len(self.nodes_to_download)):
+                    line.append(xml_nodes[cnt].text)
+                    cnt += 1
+                csvwriter.writerow(line)
+            open_csvfile.close()
+            
+    def download_txt_files(self,directory="/Textfiler/",quiet=True):
+        """Method download_txt_files(directory="/Textfiler/")
+        str -> None
+        Downloads all the text data as txt-files to 'directory' in working directory.
+        The functions checks already existing files and do only download files not already in the directory.
+        directory: were to store the txt files  
+        """
+        from os import getcwd,listdir
+        if self.typ=="anförande":
+            index_nodes = ["dok_id","anforande_nummer"]
+        else: 
+            return "Nothing downloaded!"
+        print "Laddar ned index..."
+
+        xml_index_nodes = self.get_xml(index_nodes)
+        
+        print "Totalt " + str(len(xml_index_nodes)//2) + " som skall laddas ned..."
+        
+        if self.typ=="anförande":
+            ids_to_download = [xml_index_nodes[2*i].text+"-"+xml_index_nodes[2*i+1].text for i in range(len(xml_index_nodes)//2)]
+            base_adress = "http://data.riksdagen.se/anforande/"
+        else: 
+            return "Nothing downloaded!"
+
+        print "Laddar ned txt-filer till:\n"+getcwd()+directory
+        workdir = getcwd()
+        files_downloaded = set(listdir(getcwd()+directory))
+        if self.typ=="anförande":
+            for id_to_download in ids_to_download:
+                if id_to_download+".txt" not in files_downloaded:                
+                    text = self.get_xml("anforandetext",base_adress+id_to_download)[0].text
+                    with open(workdir+directory+id_to_download+".txt","w") as txtfile:
+                        txtfile.write(text)
+                        txtfile.close()
+                    if not quiet:
+                        print id_to_download
+
+
+# Download txt-files from metadata method
+
 #    def __init__ # Skapar ett grundobjekt med information om vad som ska hämtas: person, dokument eller anförande typ URL
 #   Ange vilka variabler som är möjliga att ange samt vilka sökkriterier som finns.
 # Ladda ner den första XML-en och spara de olika möjliga noderna för att skriva ut.

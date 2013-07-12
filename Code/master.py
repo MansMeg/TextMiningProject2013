@@ -35,6 +35,21 @@ get_from_xml = ["id","dok_id","typ","datum","dokument_url_text"]
 url_text_xml = "dokument_url_text"
 
 runfile(project_path+r'/Code/functions.py', wdir=project_path)
+anf = RiksdagenApi("anförande")
+anf.set_query("sz",100000)
+anf.set_query("sz",10)
+nodes = ["dok_id", "dok_titel", "dok_rm", "dok_datum", "kammaraktivitet", "anforande_id", "anforande_nummer", "talare", "parti"]
+anf.set_nodes_to_download("all")
+anf.download_metadata("/Data/AnförandeMetadata.csv")
+anf.download_txt_files()
+
+for year in ["2010%2F11","2011%2F12","2012%2F13","2013%2F14"]:
+    print year[0:4]
+    anf.set_query("rm",year)
+    anf.download_metadata("/Data/AnfMetadata"+year[0:4]+".csv")
+    anf.download_txt_files()
+
+print test
 
 # Create files
 if not os.path.exists(csvfile):
