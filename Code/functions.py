@@ -73,7 +73,7 @@ class RiksdagenApi():
         if url==None:
             url = self.create_query_url()
         # Get the XML
-        xmltree = etree.fromstring(urlopen(url).read())
+        xmltree = etree.fromstring(unicode(urlopen(url).read(),encoding="Latin1"))
         if self.typ=="anförande":
             base = "//anforande/"
             nodes = xmltree.xpath("|".join([base + s for s in nodes_to_choose]))
@@ -177,7 +177,10 @@ class RiksdagenApi():
                         print id_to_download
 
 
-# Download txt-files from metadata method
+# f.write(all_html.encode("utf-8")
+
+
+# Download txt-files from metadata method. Se till att ladda ned index. Om inte 
 
 #    def __init__ # Skapar ett grundobjekt med information om vad som ska hämtas: person, dokument eller anförande typ URL
 #   Ange vilka variabler som är möjliga att ange samt vilka sökkriterier som finns.
