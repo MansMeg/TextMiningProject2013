@@ -1,6 +1,7 @@
 LDAobject<-best_model
 newdata <- riksdagDTMclean[holdoutIndex,]
 doc<-1
+
 phi<-posterior(LDAobject)[[1]]
 alpha<-LDAobject@alpha * (numeric(LDAobject@k)+1)
 K <- LDAobject@k

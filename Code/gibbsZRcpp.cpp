@@ -6,43 +6,77 @@ List gibbsZRcpp(IntegerVector Nz, IntegerVector z, IntegerVector w, IntegerVecto
   // Create parameters
   int n = itervec.size();
   int K = Nz.size();
+  IntegerVector zz = clone<IntegerVector>(z); 
+  IntegerVector Nzz = clone<IntegerVector>(Nz);
   NumericVector prob(K);
-  
+  // IntegerMatrix debug(n,K); //tabort
+
+  RNGScope scp; //Cant do this given !mode BUGreport?
+  Rcpp::Function RcppSample("sample");
+  IntegerVector samplespace = seq_len(K);
+
   // Loop
   int i;
   for (int sweep = 0;sweep < iter; ++sweep){
     for (int h = 0;h < n; ++h){
-      i = itervec[h];
-      Nz[z[i]-1] -= 1; // Done
-      for (int j = 0;j < K; ++j){
-        prob[j] = phi[j,w[i]-1] * (Nz[j]+alpha[j]);
-      }
-      //Normalizing prob
-      double probSum = std::accumulate(prob.begin(),prob.end(),0.0);
-      for (int j = 0;j < K; ++j){
-        prob[j] /= probSum;
-      }
-      // Select/sample z[n]
-      if(mode){// ICM
-        z[i] = Rcpp::which_max(prob)+1;
-      }else{// Sample
-        RNGScope scp;
-        Rcpp::Function RcppSample("sample");
-        IntegerVector samplespace = seq_len(K);
-        z[i] = Rcpp::as<int>(RcppSample(_["x"]=samplespace,_["size"]=1,_["prob"]=prob));
-      }
-      Nz[z[i]-1] += 1;
+        i = itervec[h]-1;
+        Nzz[zz[i]-1] -= 1; // not word h ERROR
+        for (int j = 0;j < K; ++j){
+          prob[j] = phi(j,w[i]-1) * (Nzz[j]+alpha[j]);
+        } 
+        // Normalizing
+        double probSum = std::accumulate(prob.begin(),prob.end(),0.0);
+        for (int j = 0;j < K; ++j){
+          prob[j] /= probSum;
+        }
+        // Select/sample z[n]
+        if(mode){// ICM
+          zz[i] = Rcpp::which_max(prob)+1;
+        }else{// Sample
+          zz[i] = Rcpp::as<int>(RcppSample(_["x"]=samplespace,_["size"]=1,_["prob"]=prob));
+        }
+        Nzz[zz[i]-1] += 1; // TA BORT
+        //save every step
+        //debug(h,_) = clone<IntegerVector>(Nzz);
     }
   }
 
   // Save output
   List ret;
-  ret["Nz"] = Nz;
-  ret["x"] = z;
+  ret["Nz"] = Nzz;
+  ret["z"] = zz;
+  //ret["prob"] = prob; //ta bort
+  //ret["debug"] = debug; //ta bort  
+  //ret["samlespace"] = samplespace; //ta bort
+  //ret["K"] = K; //ta bort
+  //ret["n"] = n; //ta bort
   return ret;
 }
 
+// [[Rcpp::export]]
+IntegerVector createNzRcpp(IntegerVector NzNull, IntegerVector z) {
+  int nz = z.size();
+  for (int i = 0;i < nz; ++i){
+    NzNull[z[i]-1] += 1;
+  }
+  return NzNull;
+}
+
 /*** R
+
+# Gör om till en ren Rcpp-funktion
+gibbSample<-function(K,N,phi,w,z,alpha,iter,forward=TRUE,mode=FALSE){
+  if (forward){
+    itervec <- 1:N
+  } else {
+    itervec <- N:1
+  }
+  Nz<-createNzRcpp(NzNull=numeric(K),z=z)
+
+  res <- gibbsZRcpp(Nz=Nz,z=z,w=w,alpha=alpha,phi=phi,itervec=itervec,iter=iter,mode=mode)
+  
+  return(list(res$z,res$Nz))
+}
 #  for (sweep in 1:iter){
 #    for (n in itervec){
 #      Nz[z[n]]<-Nz[z[n]]-1

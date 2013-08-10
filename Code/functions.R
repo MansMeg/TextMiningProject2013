@@ -1,4 +1,5 @@
-sourceCpp('Code/createNzRcpp.cpp')
+sourceCpp('Code/gibbsZRcpp.cpp')
+
 
 gibbSampleOld<-function(K,N,phi,w,z,alpha,iter,forward=TRUE){
   if (forward){
@@ -24,7 +25,7 @@ gibbSampleOld<-function(K,N,phi,w,z,alpha,iter,forward=TRUE){
   return(list(z,Nz))
 }
 
-gibbSampleNew<-function(K,N,phi,w,z,alpha,iter,forward=TRUE,mode=TRUE){
+gibbSampleOld2<-function(K,N,phi,w,z,alpha,iter,forward=TRUE,mode=FALSE){
   if (forward){
     itervec <- 1:N
   } else {
@@ -34,7 +35,7 @@ gibbSampleNew<-function(K,N,phi,w,z,alpha,iter,forward=TRUE,mode=TRUE){
 
   res <- gibbsZRcpp(Nz=Nz,z=z,w=w,alpha=alpha,phi=phi,itervec=itervec,iter=iter,mode=mode)
   
-  return(list(z,Nz))
+  return(list(res$z,res$Nz))
 }
 
 gibbICM<-function(K,N,phi,w,z,alpha,iter){

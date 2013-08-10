@@ -27,22 +27,24 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
     w <- rep(wDoc$j, wDoc$v)
     z <- sample(1:k,size=Nd,replace=TRUE) # Initializaton of z
     # Initialize the gibbsampler to produce an z-vector for the document
-    z<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=z,alpha=alpha,iter=zBurnin)[[1]]
+    z <- gibbSample(K=K,N=Nd,phi=phi,w=w,z=z,alpha=alpha,iter=zBurnin,mode=FALSE)[[1]]
 
     if (method=="Chib"){
       # Calculate zstar 
-      gibbzstar<-gibbICM(K=K,N=Nd,phi=phi,w=w,z=z,alpha=alpha,iter=zStariter) #Find local optimim to use as z^*, "iterative conditional modes"
+      #Find local optimim to use as z^*, "iterative conditional modes"
+      gibbzstar<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=z,alpha=alpha,iter=zStariter,mode=TRUE)  
       zstar<-gibbzstar[[1]]
       # Start the algoritm
       logTvals <- numeric(Siter)
       # Draw starting position s
       ss <- sample(1:Siter,1)
       # Draw z^s
-      gibbzs<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE)
+      gibbzs<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE,mode=FALSE)
       logTvals[ss]<-logTprob(zto=zstar,zfrom=gibbzs[[1]],Nz=gibbzs[[2]],phi=phi,w=w,alpha=alpha)
-      # Draw forward part
-      for (step in (ss+1):Siter){
-        gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1)
+
+      # Draw forward part 
+      for (step in (ss+1):Siter){ #All måste bygga på zstar och framåt - gör en Rcpploop för denna och nedan
+        gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=TRUE,mode=FALSE)
         logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
       }
       # Draw backward part

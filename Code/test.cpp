@@ -22,3 +22,30 @@ int RcppWhichMax(NumericVector test) {
 }
 
 
+int forward(int i,int j) {
+  int res = i+j;
+  return res;
+}
+
+// [[Rcpp::export]]
+int backward(int i,int j) {
+  int res = i-j+forward(i,j);
+  return res;
+}
+
+// [[Rcpp::export]]
+int testfun(Function test,int i,int j) {
+  int res = Rcpp::as<int>(test(i,j));
+  return res;
+}
+// [[Rcpp::export]]
+int tryitall(bool back,int i,int j) {
+  int res;
+  if (back){
+    res = Rcpp::as<int>(testfun(backward,i,j));
+  }
+  if (not back){
+    res = Rcpp::as<int>(testfun(forward,i,j));
+  }
+  return res;
+}

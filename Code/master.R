@@ -88,7 +88,7 @@ save(riksdagDTMclean,file="riksdagsDTMclean.Rdata")
 
   
 # test LDA
-#load("Data/riksdagsDTMcleansmall.Rdata")
+# load("Data/riksdagsDTMcleansmall.Rdata")
 
 minK <- 10
 maxK <- 200
@@ -143,7 +143,7 @@ best_model <- LDA(riksdagDTMclean[-holdoutIndex,], k = k, method = "Gibbs", cont
 
 # Jämför old och new functions
 
-# implementera sample() från armadillo för att speeda up
+# implementera sample() från armadillo för att speeda up än mer.
 
 resvec<-numeric(20)
 for (test in 1:20){
