@@ -44,16 +44,12 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
       logTvals[ss]<-logTprobRcpp(zto=zstar,zfrom=gibbzs[[2]],Nz=gibbzs[[1]],phi=phi,w=w,alpha=alpha)
       
       # Draw forward part 
-      for (step in (ss+1):Siter){ #All måste bygga på zstar och framåt - gör en Rcpploop för denna och nedan
-        gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=TRUE,mode=FALSE)
-        logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
-      }
+      logTvals[(ss+1):Siter]<-chibIterateRcpp(zstart=gibbzs[[2]],zstar=zstar,w=w,alpha=alpha,phi=phi,iter=(Siter-ss),forward=TRUE)
+
       # Draw backward part
-      for (step in (ss-1):1){
-        gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE)
-        logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
-      }
+      logTvals[(ss-1):1]<-chibIterateRcpp(zstart=gibbzs[[2]],zstar=zstar,w=w,alpha=alpha,phi=phi,iter=(ss-1),forward=FALSE)
       
+# Done 
       # Calculate estimate log P(w|phi,alpha) (log evidence)
       log_pz = sum(lgamma(gibbzstar[[2]]+alpha)) + lgamma(sum(alpha)) - sum(lgamma(alpha)) - lgamma(Nd+sum(alpha))
       log_w_given_z<-0

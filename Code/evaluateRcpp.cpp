@@ -144,8 +144,19 @@ double logTprobRcpp(IntegerVector zto, IntegerVector zfrom, IntegerVector Nz, In
 
 // Gibbs sampling of Z (for heldout data w)
 // [[Rcpp::export]]
-List chibIterateRcpp(IntegerVector zstar, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
+NumericVector chibIterateRcpp(IntegerVector zstart, IntegerVector zstar, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
+  NumericVector logTProbValue(iter);
+  int K = phi.nrow();
+  List gibbZ;
+  gibbZ["Nz"] = calcNzRcpp(K,zstart);
+  gibbZ["z"] = clone<IntegerVector>(zstart);
+
+  for (int i = 0;i < iter; ++i){
+    gibbZ = gibbsZRcpp(gibbZ["z"],w,alpha,phi,1,forward);
+    logTProbValue[i] = logTprobRcpp(zstar,gibbZ["z"],gibbZ["Nz"],w,alpha,phi);
+  }
   
+  return logTProbValue;
 }
 
 /*
