@@ -132,7 +132,7 @@ for (i in 1:(bin_search+2){
 # Produce final LDA model
 
 # Det verkar som att thin är detsamma som iter 
-k <- 10
+k <- 15
 set.seed(k)
 holdoutIndex<-sample(1:dim(riksdagDTMclean)[1],100)
 control_LDA_Gibbs <- list(alpha = 50/k, estimate.beta = TRUE,

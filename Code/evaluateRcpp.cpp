@@ -14,7 +14,7 @@ IntegerVector calcNzRcpp(int K, IntegerVector z) {
 
 // Gibbs sampling of Z (for heldout data w)
 // [[Rcpp::export]]
-List gibbsZRcpp(IntegerVector z, IntegerVector w, IntegerVector alpha, NumericMatrix phi, int iter, bool forward) {
+List gibbsZRcpp(IntegerVector z, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
   // Create parameters
   int Nd = w.size();
   int K = phi.nrow();
@@ -58,9 +58,9 @@ List gibbsZRcpp(IntegerVector z, IntegerVector w, IntegerVector alpha, NumericMa
   return ret;
 }
 
-
+// Iterative conditional means (z*)
 // [[Rcpp::export]]
-List gibbsICMZRcpp(IntegerVector z, IntegerVector w, IntegerVector alpha, NumericMatrix phi, int iter, bool forward) {
+List icmZRcpp(IntegerVector z, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
   // Create parameters
   int Nd = w.size();
   int K = phi.nrow();
@@ -104,4 +104,61 @@ List gibbsICMZRcpp(IntegerVector z, IntegerVector w, IntegerVector alpha, Numeri
   return ret;
 }
 
+
+// Transition operator probability
+// [[Rcpp::export]]
+double logTprobRcpp(IntegerVector zto, IntegerVector zfrom, IntegerVector Nz, IntegerVector w, NumericVector alpha, NumericMatrix phi) {
+  // Create parameters
+  int Nd = w.size();
+  int K = phi.nrow();
+  
+  IntegerVector zzto = clone<IntegerVector>(zto); 
+  IntegerVector zzfrom = clone<IntegerVector>(zfrom); 
+  IntegerVector Nzz = clone<IntegerVector>(Nz);
+  NumericVector prob(K);
+  IntegerVector itervec = seq_len(Nd);
+  
+  double lp = 0;
+  
+  // Loop
+  int i;
+  for (int h = 0;h < Nd; ++h){
+      i = itervec[h]-1;
+      Nzz[zzfrom[i]-1] -= 1;
+      for (int j = 0;j < K; ++j){
+        prob[j] = phi(j,w[i]-1) * (Nzz[j]+alpha[j]);
+      } 
+
+      // Normalizing
+      double probSum = std::accumulate(prob.begin(),prob.end(),0.0);
+      for (int j = 0;j < K; ++j){
+        prob[j] /= probSum;
+      }
+      // Add log(P)
+      lp += log(prob[zzto[i]-1]);
+      Nzz[zzto[i]-1] += 1; 
+  }
+
+  return lp;
+}
+
+// Gibbs sampling of Z (for heldout data w)
+// [[Rcpp::export]]
+List chibIterateRcpp(IntegerVector zstar, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
+  
+}
+
+/*
+# Draw forward part 
+for (step in (ss+1):Siter){ #All måste bygga på zstar och framåt - gör en Rcpploop för denna och nedan
+  gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=TRUE,mode=FALSE)
+  logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
+}
+# Draw backward part
+for (step in (ss-1):1){
+  gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE)
+  logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
+}
+
+*/
 

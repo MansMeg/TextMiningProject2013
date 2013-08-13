@@ -65,17 +65,22 @@ gibbICM<-function(K,N,phi,w,z,alpha,iter){
   return(list(z,Nz))
 }
 
-logTprob<-function(zto,zfrom,Nz,phi,w,alpha){
+logTprobR<-function(zto,zfrom,Nz,phi,w,alpha){
   Nd <- length(w)
+  K <- length(alpha)
+  prob<-numeric(K)
   lp <- 0
-  for (n in 1:N){
+  for (n in 1:Nd){
     Nz[zfrom[n]] <- Nz[zfrom[n]]-1
     for (k in 1:K){
-      prob[k] <- phi[k,w[n]] * (Nz[k]+alpha[k])/(N-1+sumAlpha)
+      prob[k] <- phi[k,w[n]] * (Nz[k]+alpha[k])
     }
     prob<-prob/sum(prob)
-    lp <- lp + log(prob[zto[n]]) 
+    lp <- lp + log(prob[zto[n]])
     Nz[zto[n]] <- Nz[zto[n]] + 1
   }
   return(lp)
 }
+
+
+min(phi)

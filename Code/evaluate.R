@@ -13,35 +13,36 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
   K <- LDAobject@k
   D <- dim(newdata)[1]
   logEvidenceD <- numeric(D)
+  logEvidence <- NA
   
-  # Iterations
-  zBurnin <- 20 # The number of burnins befor zstar is calculated 3 is used in Wallach et al. (2009)
-  zStariter <- 15 # Number of maximum iterations "iterative conditional modes", stops if z_{n}==z_{n-1} 12 used in Wallach et al. (2009)
-  Siter <- 1000 # S 1000 used in
+  if (method == "Chib"){
+    # Iterations
+    zBurnin <- 20 # The number of burnins befor zstar is calculated 3 is used in Wallach et al. (2009)
+    zStariter <- 15 # Number of maximum iterations "iterative conditional modes", stops if z_{n}==z_{n-1} 12 used in Wallach et al. (2009)
+    Siter <- 1000 # S 1000 used in
+    
+    # Do the calculations for each document this can be parallized using mclapply doc<-1
+    for (doc in 1:D){
+      # Create parameters for the document
+      wDoc <- newdata[doc,]
+      Nd <- sum(wDoc$v)
+      w <- rep(wDoc$j, wDoc$v)
+      z <- sample(1:k,size=Nd,replace=TRUE) # Initializaton of z
+      # Initialize the gibbsampler to produce an z-vector for the document
+      z <- gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=zBurnin,forward=TRUE)[[2]]
   
-  # Do the calculations for each document doc<-1
-  for (doc in 1:D){
-    # Create parameters for the document
-    wDoc <- newdata[doc,]
-    Nd <- sum(wDoc$v)
-    w <- rep(wDoc$j, wDoc$v)
-    z <- sample(1:k,size=Nd,replace=TRUE) # Initializaton of z
-    # Initialize the gibbsampler to produce an z-vector for the document
-    z <- gibbSample(K=K,N=Nd,phi=phi,w=w,z=z,alpha=alpha,iter=zBurnin,mode=FALSE)[[1]]
-
-    if (method=="Chib"){
       # Calculate zstar 
-      #Find local optimim to use as z^*, "iterative conditional modes"
-      gibbzstar<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=z,alpha=alpha,iter=zStariter,mode=TRUE)  
-      zstar<-gibbzstar[[1]]
+      # Find local optimim to use as z^* using "iterative conditional modes" as is done by Wallach et al. (2009)
+      gibbzstar<-icmZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=zStariter,forward=TRUE)
+      zstar<-gibbzstar[[2]]
       # Start the algoritm
       logTvals <- numeric(Siter)
       # Draw starting position s
       ss <- sample(1:Siter,1)
       # Draw z^s
-      gibbzs<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE,mode=FALSE)
-      logTvals[ss]<-logTprob(zto=zstar,zfrom=gibbzs[[1]],Nz=gibbzs[[2]],phi=phi,w=w,alpha=alpha)
-
+      gibbzs<-gibbsZRcpp(z=zstar,w=w,alpha=alpha,phi=phi,iter=1,forward=FALSE)
+      logTvals[ss]<-logTprobRcpp(zto=zstar,zfrom=gibbzs[[2]],Nz=gibbzs[[1]],phi=phi,w=w,alpha=alpha)
+      
       # Draw forward part 
       for (step in (ss+1):Siter){ #All måste bygga på zstar och framåt - gör en Rcpploop för denna och nedan
         gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=TRUE,mode=FALSE)
@@ -52,6 +53,7 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
         gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE)
         logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
       }
+      
       # Calculate estimate log P(w|phi,alpha) (log evidence)
       log_pz = sum(lgamma(gibbzstar[[2]]+alpha)) + lgamma(sum(alpha)) - sum(lgamma(alpha)) - lgamma(Nd+sum(alpha))
       log_w_given_z<-0
@@ -59,11 +61,14 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
         log_w_given_z <- log_w_given_z + log(phi[zstar[t],w[t]])
       }
       log_evidence <- log_pz + log_w_given_z - (log(sum(exp(logTvals))) - log(Siter))
-    }
-    # Save results in 
-    logEvidenceD[doc]<-log_evidence
+      
+      # Save results in 
+      logEvidenceD[doc]<-log_evidence
+      }
+    logEvidence<-sum(logEvidenceD)
   }
-  return(sum(logEvidenceD))
+  
+  return(logEvidence)
 }
 
 
