@@ -142,7 +142,7 @@ double logTprobRcpp(IntegerVector zto, IntegerVector zfrom, IntegerVector Nz, In
   return lp;
 }
 
-// Gibbs sampling of Z (for heldout data w)
+// Calculating forward and backward part och the Chib Method
 // [[Rcpp::export]]
 NumericVector chibIterateRcpp(IntegerVector zstart, IntegerVector zstar, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
   NumericVector logTProbValue(iter);
@@ -158,18 +158,4 @@ NumericVector chibIterateRcpp(IntegerVector zstart, IntegerVector zstar, Integer
   
   return logTProbValue;
 }
-
-/*
-# Draw forward part 
-for (step in (ss+1):Siter){ #All måste bygga på zstar och framåt - gör en Rcpploop för denna och nedan
-  gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=TRUE,mode=FALSE)
-  logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
-}
-# Draw backward part
-for (step in (ss-1):1){
-  gibbzz<-gibbSample(K=K,N=Nd,phi=phi,w=w,z=zstar,alpha=alpha,iter=1,forward=FALSE)
-  logTvals[step]<-logTprob(zto=zstar,zfrom=gibbzz[[1]],Nz=gibbzz[[2]],phi=phi,w=w,alpha=alpha)
-}
-
-*/
 
