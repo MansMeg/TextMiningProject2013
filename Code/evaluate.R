@@ -39,7 +39,7 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
       w <- rep(wDoc$j, wDoc$v)
       z <- sample(1:K,size=Nd,replace=TRUE) # Initializaton of z
       # Initialize the gibbsampler to produce an z-vector for the document
-      z <- gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=zBurnin,forward=TRUE)[[2]]
+      z <- gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=zBurnin,forward=TRUE,allz=FALSE)[[2]]
   
       # Calculate zstar 
       # Find local optimim to use as z^* using "iterative conditional modes" as is done by Wallach et al. (2009)
@@ -50,7 +50,7 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
       # Draw starting position s
       ss <- sample(1:Siter,1)
       # Draw z^s
-      gibbzs<-gibbsZRcpp(z=zstar,w=w,alpha=alpha,phi=phi,iter=1,forward=FALSE)
+      gibbzs<-gibbsZRcpp(z=zstar,w=w,alpha=alpha,phi=phi,iter=1,forward=FALSE,allz=FALSE)
       logTvals[ss]<-logTprobRcpp(zto=zstar,zfrom=gibbzs[[2]],Nz=gibbzs[[1]],phi=phi,w=w,alpha=alpha)
       
       # Draw forward part 
@@ -78,9 +78,28 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
   
   # Harmonic mean
   if (method == "Harmonic"){
-    
-  }
+    zBurnin <- 1000 # S 1000 used in
+    Siter <- 1000 # S 1000 used in
 
+    for (doc in 1:D){ #doc<-1
+      # Create parameters for the document
+      wDoc <- newdata[doc,]
+      Nd <- sum(wDoc$v)
+      w <- rep(wDoc$j, wDoc$v)
+      z <- sample(1:K,size=Nd,replace=TRUE) # Initializaton of z      
+      z <- gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=zBurnin,forward=TRUE,allz=FALSE)[[2]]
+      # Initialize the gibbsampler to produce an z-matrix for the document
+      zMatrix <- gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=Siter,forward=TRUE,allz=TRUE)[[2]]
+      # Calculate sum(log(p(w|z,phi)) for each
+      logProbS<-apply(zMatrix,1,logProbDoc,w=w,phi=phi)
+      # Save evidence
+      logEvidenceD[doc]<- -(matrixStats::logSumExp(lx=-logProbS)-log(length(logProbS)))     
+      # Updating progress bar
+      setTxtProgressBar(pb, doc)      
+    }
+    logEvidence<-sum(logEvidenceD)
+  }
+  
   # Closing progress bar
   close(pb)
   return(logEvidence)
