@@ -14,11 +14,11 @@ IntegerVector calcNzRcpp(int K, IntegerVector z) {
 
 // Gibbs sampling of Z (for heldout data w)
 // [[Rcpp::export]]
-List gibbsZRcpp(IntegerVector z, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward) {
-  // Create parameters
+List gibbsZRcpp(IntegerVector z, IntegerVector w, NumericVector alpha, NumericMatrix phi, int iter, bool forward, bool allz) {
+  // Create parameters 
   int Nd = w.size();
   int K = phi.nrow();
-  
+
   IntegerVector zz = clone<IntegerVector>(z); 
   IntegerVector Nzz = calcNzRcpp(K,zz);
   NumericVector prob(K);
@@ -26,6 +26,10 @@ List gibbsZRcpp(IntegerVector z, IntegerVector w, NumericVector alpha, NumericMa
   if (not forward){
     itervec = rev(seq_len(Nd));
   }
+  
+  // Create matrix if all z should be returned
+  IntegerMatrix zzall(iter,Nd);
+  IntegerMatrix Nzzall(iter,K);
   
   RNGScope scp;
   Rcpp::Function RcppSample("sample");
@@ -49,12 +53,21 @@ List gibbsZRcpp(IntegerVector z, IntegerVector w, NumericVector alpha, NumericMa
         zz[i] = Rcpp::as<int>(RcppSample(_["x"]=samplespace,_["size"]=1,_["prob"]=prob));
         Nzz[zz[i]-1] += 1; 
     }
+    if (allz){
+      zzall(sweep,_) = clone<IntegerVector>(zz);
+      Nzzall(sweep,_) = clone<IntegerVector>(Nzz);
+    }  
   }
 
   // Save output
   List ret;
-  ret["Nz"] = Nzz;
-  ret["z"] = zz;
+  if (not allz){
+    ret["Nz"] = Nzz;
+    ret["z"] = zz;
+  } else {
+    ret["NzMatrix"] = Nzzall;
+    ret["zMatrix"] = zzall;    
+  }
   return ret;
 }
 
@@ -149,13 +162,24 @@ NumericVector chibIterateRcpp(IntegerVector zstart, IntegerVector zstar, Integer
   int K = phi.nrow();
   List gibbZ;
   gibbZ["Nz"] = calcNzRcpp(K,zstart);
-  gibbZ["z"] = clone<IntegerVector>(zstart);
+  gibbZ["z"] = clone<IntegerVector>(zstart);  
 
+  bool allz = FALSE;
   for (int i = 0;i < iter; ++i){
-    gibbZ = gibbsZRcpp(gibbZ["z"],w,alpha,phi,1,forward);
+    gibbZ = gibbsZRcpp(gibbZ["z"],w,alpha,phi,1,forward,allz);
     logTProbValue[i] = logTprobRcpp(zstar,gibbZ["z"],gibbZ["Nz"],w,alpha,phi);
   }
   
   return logTProbValue;
 }
 
+
+// Calculating P(w|z,phi)
+// [[Rcpp::export]]
+double logProbDoc(IntegerVector w, IntegerVector z, NumericMatrix phi){
+  double resprob = 0;
+  for (int i = 0;i < w.size(); ++i){
+    resprob += log(phi(z[i]-1,w[i]-1));
+  }
+  return resprob;
+}
