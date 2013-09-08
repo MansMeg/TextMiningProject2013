@@ -1,4 +1,7 @@
-LDAobject<-best_model
+LDAobject=estmodobj
+newdata=riksdagDTMclean[holdoutIndex,]
+
+LDAobject<-estmodobj
 newdata <- riksdagDTMclean[holdoutIndex,]
 doc<-1
 
@@ -24,10 +27,16 @@ mode<-TRUE
 iter<-1000
 Nz<-createNzRcpp(NzNull=numeric(K),z=zstart)
 
+set.seed(10)
+test1<-gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=1,forward=TRUE)[[2]]
+set.seed(10)
+test2<-getPart(z=z,w=w,alpha=alpha,phi=phi,iter=1,forward=TRUE)
+test1==test2
+
 test<-gibbsZRcpp(Nz=Nz,z=zstart,w=w,alpha=alpha,phi=phi,itervec=itervec,iter=iter,mode=TRUE)
 test2<-gibbsZRcpp(Nz=Nz,z=zstart,w=w,alpha=alpha,phi=phi,itervec=itervec,iter=iter,mode=FALSE)
 
-test<-gibbsZRcpp(z=zstart,w=w,alpha=alpha,phi=phi,iter=1000,forward=TRUE)
+test<-gibbsZRcpp(z=z,w=w,alpha=alpha,phi=phi,iter=1000,forward=TRUE)
 
 zend<-test$z
 myNz<-test$Nz
@@ -73,3 +82,10 @@ test2[1]
 all(phimat1==phimat2)
 # TRUE
 
+set.seed(10)
+testing1<-chibIterateRcpp(zstart=z,w=w,alpha=alpha,phi=phi,iter=1,forward=TRUE)
+set.seed(10)
+testing2<-chibIterateRcpp(zstart=z,zstar=zstar,w=w,alpha=alpha,phi=phi,iter=1000,forward=TRUE)
+hist(testing2)
+
+logTvals[(ss - 1):1]<-numeric(0)

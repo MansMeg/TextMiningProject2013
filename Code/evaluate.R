@@ -6,6 +6,9 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
   if (class(newdata)[1]!="DocumentTermMatrix"){
     stop("newdata is not a DocumentTermMatrix object")
   }
+  if (dim(newdata)[2] != dim(posterior(LDAobject)[[1]])[2]){
+    stop("Different vocabulary for holdout-data and the LDA model")
+  }
   
   # Get results from the LDAobject
   phi<-posterior(LDAobject)[[1]]
@@ -15,8 +18,16 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
   logEvidenceD <- numeric(D)
   logEvidence <- NA
   
+  
   # Create progress bar
   pb <- txtProgressBar(min = 0, max = D, style = 3)
+  
+  # Debugging Tool ===
+  debugBool<-FALSE
+  if(debugBool){
+    debuglist<<-list()
+  }  
+  # ===
   
   if (method == "Chib"){
     # Iterations
@@ -24,14 +35,10 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
     zStariter <- 15 # Number of maximum iterations "iterative conditional modes", stops if z_{n}==z_{n-1} 12 used in Wallach et al. (2009)
     Siter <- 1000 # S 1000 used in
     
-    debug<-FALSE
-    if(debug){
-      debuglist<<-list()
-    }
     # Do the calculations for each document this can be parallized using mclapply doc<-1
     for (doc in 1:D){
       # Save Seed for debugging
-      if(debug){debuglist[[doc]]<<-.Random.seed}
+      if(debugBool){debuglist[[doc]]<<-.Random.seed}
       
       # Create parameters for the document
       wDoc <- newdata[doc,]
@@ -81,7 +88,9 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
     zBurnin <- 1000 # S 1000 used in
     Siter <- 1000 # S 1000 used in
 
-    for (doc in 1:D){ #doc<-1
+    for (doc in 1:D){ #doc<-14      
+      if(debugBool){debuglist[[doc]]<<-.Random.seed}
+      
       # Create parameters for the document
       wDoc <- newdata[doc,]
       Nd <- sum(wDoc$v)
@@ -98,6 +107,21 @@ evaluate<- function(LDAobject,newdata,method="Chib"){
       setTxtProgressBar(pb, doc)      
     }
     logEvidence<-sum(logEvidenceD)
+  }
+  if (method == "left-to-right"){
+    # Iterations    
+    Siter <- 1000 # S 1000 used in
+    for (doc in 1:D){ #doc<-1
+      # Create parameters for the document
+      wDoc <- newdata[doc,]
+      Nd <- sum(wDoc$v)
+      w <- rep(wDoc$j, wDoc$v)
+      
+      logEvidenceD[doc]<- -(matrixStats::logSumExp(lx=-logProbS)-log(length(logProbS)))     
+      # Updating progress bar
+      setTxtProgressBar(pb, doc)      
+    }
+    
   }
   
   # Closing progress bar
