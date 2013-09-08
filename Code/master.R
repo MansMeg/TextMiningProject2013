@@ -24,7 +24,11 @@ library(matrixStats)
 library(coda)
 
 # Program parameters
-project_path <- file.path("/Users",Sys.info()[7],"Dropbox/Projekt/Text Mining/Project/TextMiningProject2013")
+if(Sys.info()[1]=="Linux"){
+  project_path <- "/home/rstudio/TextMiningProject2013"
+}else{
+  project_path <- file.path("/Users",Sys.info()[7],"Dropbox/Projekt/Text Mining/Project/TextMiningProject2013")
+}
 text_files_path <- "Textfiler/"
 setwd(project_path)
 
@@ -67,7 +71,7 @@ if (createCorpus){
   riksdagCorpStemmed <- tm_map(riksdagCorp, stemDocument,language="swedish")
   
   # To do: Numbers to NUMBER token
-  # På sikt kolla att behålla viss punctuation ex. (s) och nummer ersätts med NUMBER
+  # P? sikt kolla att beh?lla viss punctuation ex. (s) och nummer ers?tts med NUMBER
   save(riksdagCorpStemmed,file="Data/riksdagsCorpusStemmed.Rdata")
 }
 if (!createCorpus){
@@ -338,7 +342,7 @@ which.max(test)
 hist(test)
 
 modPosterior$terms[52,][order(modPosterior$terms[52,],decreasing=TRUE)][1:20]
-# Beräkna perplexity, likelihood och (om tid finnes) harmonic mean
+# Ber?kna perplexity, likelihood och (om tid finnes) harmonic mean
 
 
 
@@ -416,7 +420,7 @@ test<-model_list[[1]]
 
 plot(test@fitted[[2]]@logLiks)
 
-# Det verkar som att thin är detsamma som iter 
+# Det verkar som att thin ?r detsamma som iter 
 k <- 100
 set.seed(k)
 holdoutIndex<-sample(1:dim(riksdagDTMclean)[1],10)
