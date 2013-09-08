@@ -181,11 +181,11 @@ for (i in 1:dim(fileDF)[1]){#i<-1
   mcmcList<-mcmc.list()
 
   control_LDA_Gibbs <- list(alpha = alpha, estimate.beta = TRUE, best=TRUE,
-                            verbose = 1, prefix = "testfil", save = 0, keep = 1,
+                            verbose = 200, prefix = "testfil", save = 0, keep = 1,
                             seed = as.integer(Sys.time()), nstart = 1,
                             iter = 1, burnin = restartBurnin, thin = 1)
 
-  for (l in 1:noOfChains){
+  for (l in 1:noOfChains){ #l<-1
     cat("ReRunning LDA model",l,"of",noOfChains,"with K =",startobjList[[l]]@k,"Iter =",
         restartBurnin,"and alpha =",alpha,"\nStarting",as.character(Sys.time()),"...\n")
     control_LDA_Gibbs$seed <- as.integer(Sys.time())
