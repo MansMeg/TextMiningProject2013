@@ -79,10 +79,6 @@ if (!createCorpus){
   load(file="Data/riksdagsCorpusStemmed.Rdata")
 }
 
-inspect(riksdagCorp)
-test<-tm_filter(x=riksdagCorp,pattern="invandrare")
-inspect(test[1])
-
 createMetadata<-FALSE
 if(createMetadata){
   anfMetadata<-read.csv(file="Data/AnfMetadata2010.csv")
@@ -94,7 +90,6 @@ if(!createMetadata){
   load(file="Data/anfMetadata.Rdata")
 }  
 
-colnames(riksdagDTM)[1:100]
 # Create term matrix
 createDTM<-FALSE
 if (createDTM){
@@ -186,7 +181,7 @@ for (i in 1:dim(fileDF)[1]){#i<-1
   mcmcList<-mcmc.list()
 
   control_LDA_Gibbs <- list(alpha = alpha, estimate.beta = TRUE, best=TRUE,
-                            verbose = 0, prefix = "testfil", save = 0, keep = 1,
+                            verbose = 1, prefix = "testfil", save = 0, keep = 1,
                             seed = as.integer(Sys.time()), nstart = 1,
                             iter = 1, burnin = restartBurnin, thin = 1)
 
