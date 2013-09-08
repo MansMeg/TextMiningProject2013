@@ -195,6 +195,7 @@ for (i in 1:dim(fileDF)[1]){#i<-1
                            model=startobjList[[l]], 
                            control=control_LDA_Gibbs)
     mcmcList[[l]]<-as.mcmc(modelobjList[[l]]@logLiks[(restartBurnin-restartChooseLastNo):restartBurnin])
+    gc()
   }
   plot(mcmcList)
   gelman.diag(mcmcList)
