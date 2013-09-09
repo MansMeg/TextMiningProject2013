@@ -167,7 +167,7 @@ fileDF<-fileDF[order(fileDF$k,fileDF$restartNo,decreasing=T),]
 fileDF<-fileDF[!duplicated(fileDF$k),]
 fileDF<-fileDF[order(fileDF$k),]
 
-# fileDF<-fileDF[1,]
+# fileDF<-fileDF[1:2,]
 
 restartBurnin<-1200
 restartChooseLastNo<-1000
@@ -183,7 +183,7 @@ for (i in 1:dim(fileDF)[1]){#i<-1
   mcmcList<-mcmc.list()
 
   control_LDA_Gibbs <- list(alpha = alpha, estimate.beta = TRUE, best=TRUE,
-                            verbose = 200, prefix = "testfil", save = 0, keep = 1,
+                            verbose = 0, prefix = "testfil", save = 0, keep = 1,
                             seed = as.integer(Sys.time()), nstart = 1,
                             iter = 1, burnin = restartBurnin, thin = 1)
 
@@ -203,6 +203,8 @@ for (i in 1:dim(fileDF)[1]){#i<-1
   gelman.diag(mcmcList)
   mcmcListOfList[[length(mcmcListOfList)+1]]<-mcmcList
   save(modelobjList,mcmcListOfList,file=paste("Models/LDAmod",models[i],"restart",(length(mcmcListOfList)-1),".Rdata",sep=""))
+  rm(modelobjList,mcmcListOfList)
+  gc()
 }
 
 
