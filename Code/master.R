@@ -166,7 +166,7 @@ fileDF$restartNo[is.na(fileDF$restartNo)]<-0
 fileDF<-fileDF[order(fileDF$k,fileDF$restartNo,decreasing=T),]
 fileDF<-fileDF[!duplicated(fileDF$k),]
 fileDF<-fileDF[order(fileDF$k),]
-
+row.names(fileDF)<-NULL
 # fileDF<-fileDF[1:2,]
 
 restartBurnin<-1200
@@ -186,10 +186,11 @@ for (i in 1:dim(fileDF)[1]){#i<-1
                             verbose = 0, prefix = "testfil", save = 0, keep = 1,
                             seed = as.integer(Sys.time()), nstart = 1,
                             iter = 1, burnin = restartBurnin, thin = 1)
-
+  timeToRun<-character(0)
   for (l in 1:noOfChains){
     cat("ReRunning LDA model",l,"of",noOfChains,"with K =",startobjList[[l]]@k,"Iter =",
         restartBurnin,"and alpha =",alpha,"\nStarting",as.character(Sys.time()),"...\n")
+    timeToRun<-c(timeToRun,as.character(Sys.time()))
     control_LDA_Gibbs$seed <- as.integer(Sys.time())
 
     modelobjList[[l]]<-LDA(riksdagDTMclean[-holdoutIndex,], 
@@ -202,7 +203,7 @@ for (i in 1:dim(fileDF)[1]){#i<-1
   plot(mcmcList)
   gelman.diag(mcmcList)
   mcmcListOfList[[length(mcmcListOfList)+1]]<-mcmcList
-  save(modelobjList,mcmcListOfList,file=paste("Models/LDAmod",models[i],"restart",(length(mcmcListOfList)-1),".Rdata",sep=""))
+  save(modelobjList,mcmcListOfList,timeToRun,file=paste("Models/LDAmod",fileDF[i,1],"restart",(length(mcmcListOfList)-1),".Rdata",sep=""))
   rm(modelobjList,mcmcListOfList)
   gc()
 }
