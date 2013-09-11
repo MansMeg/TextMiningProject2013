@@ -95,13 +95,19 @@ createDTM<-FALSE
 if (createDTM){
   controlList <- list(minWordLength = 3,local = c(5,Inf)) # Detta verkar inte funka
   riksdagDTM <- DocumentTermMatrix(riksdagCorp, control = controlList)
+  riksdagDebattDTM <- DocumentTermMatrix(riksdagDebattCorp, control = controlList)
   riksdagDTMStemmed <- DocumentTermMatrix(riksdagCorpStemmed, control = controlList))
+
+  riksdagDebattDTM<-riksdagDebattDTM[,col_sums(x=riksdagDebattDTM)>5]
+  riksdagDTM<-riksdagDTM[,col_sums(x=riksdagDTM)>5]
+  
   save(riksdagDTM,file="Data/riksdagsDTM.Rdata")
+  save(riksdagDebattDTM,file="Data/riksdagsDebattDTM.Rdata")
   save(riksdagDTMStemmed,file="Data/riksdagsDTMStemmed.Rdata")
 }
 if (!createDTM){
-  load(file="Data/riksdagsDTM.Rdata")
-  riksdagDTM<-riksdagDTM[,col_sums(x=riksdagDTM)>5]
+  load(file="Data/riksdagsDebattDTM.Rdata");riksdagDTM<-riksdagDebattDTM
+  #load(file="Data/riksdagsDTM.Rdata")
   #load(file="Data/riksdagsDTMStemmed.Rdata")    
 }
 
@@ -110,15 +116,15 @@ cleanDTM<-FALSE
 if (cleanDTM){
   term_tfidf <- tapply(riksdagDTM$v/row_sums(riksdagDTM)[riksdagDTM$i], riksdagDTM$j, mean) * log2(nDocs(riksdagDTM)/col_sums(riksdagDTM > 0))
   # riksdagDTMclean <-riksdagDTM[,term_tfidf>= 0.03]
-  riksdagDTMclean <-riksdagDTM[,order(term_tfidf,decreasing=TRUE)[1:25000]]
+  riksdagDTMclean <-riksdagDTM[,order(term_tfidf,decreasing=TRUE)[1:10000]]
   noInformationDoc<-which(row_sums(riksdagDTMclean)==0)
   length(noInformationDoc)
-  # inspect(riksdagCorp[noInformationDoc[1:5]])
+  # inspect(riksdagDebattCorp[noInformationDoc])
   riksdagDTMclean <- riksdagDTMclean[row_sums(riksdagDTMclean)>0,]
   save(riksdagDTMclean,file="Data/riksdagsDTMclean.Rdata")
 }
 if (!cleanDTM){
-  load("Data/riksdagsDTMclean.Rdata")
+  load("Data/riksdagsDebattDTMclean.Rdata")
   dim(riksdagDTMclean)
 }
 set.seed(20130801)
@@ -126,10 +132,10 @@ holdoutIndex<-sample(1:dim(riksdagDTMclean)[1],100)
 
 
 # Burning in models i<-10
-mR<-5 # No of burn-in-chain to asses convergence
-burninNo<-2000
-chooseLastNo<-1000
-models<-c(50*1:5)
+mR<-6 # No of burn-in-chain to asses convergence
+burninNo<-10000
+fromBurninNo<-1000
+models<-c(50*1:1)
 alpha<-0.01
 
 for (i in 1:length(models)){ # j<-i<-k<-1
@@ -137,21 +143,21 @@ for (i in 1:length(models)){ # j<-i<-k<-1
     k<-models[i]
     modelobjList<-list()
     mcmcList<-mcmc.list()
-    
     control_LDA_Gibbs <- list(alpha = alpha, estimate.beta = TRUE, best=TRUE,
-                               verbose = 0, prefix = "testfil", save = 0, keep = 1,
+                               verbose = 1000, prefix = "testfil", save = 0, keep = 1,
                                seed = as.integer(Sys.time()), nstart = 1, delta = 0.1,
                                iter = 1, burnin = burninNo, thin = 1)
+
     for (l in 1:mR){
-      cat("Running LDA model",l,"of",mR,"with K =",k,"Iter =",burninNo,"and alpha =",control_LDA_Gibbs$alpha,"\nStarting",as.character(Sys.time()),"...\n")
+      cat("Running LDA model",l,"of",mR,"with N =",dim(riksdagDTMclean)[1],"V =",dim(riksdagDTMclean)[2],"K =",k,"Iter =",burninNo,"and alpha =",control_LDA_Gibbs$alpha,"\nStarting",as.character(Sys.time()),"...\n")
       control_LDA_Gibbs$seed<-as.integer(Sys.time())
       modelobjList[[l]]<-LDA(riksdagDTMclean[-holdoutIndex,], k = k, method = "Gibbs", control = control_LDA_Gibbs)
-      mcmcList[[l]]<-as.mcmc(modelobjList[[l]]@logLiks[(burninNo-chooseLastNo):burninNo])
+      mcmcList[[l]]<-as.mcmc(modelobjList[[l]]@logLiks)
       gc()
     }
-    print(gelman.diag(mcmcList))
     save(modelobjList,mcmcList,file=paste("Models/LDAmod",models[i],".Rdata",sep=""))
-    plot(mcmcList)    
+    plot(as.mcmc.list(lapply(X=mcmcList,function(X) as.mcmc(X[fromBurninNo:burninNo]))))
+    gelman.diag(as.mcmc.list(lapply(X=mcmcList,function(X) as.mcmc(X[fromBurninNo:burninNo]))))
     rm(modelobjList)
   }
 }
@@ -207,51 +213,6 @@ for (i in 1:dim(fileDF)[1]){#i<-1
   rm(modelobjList,mcmcListOfList)
   gc()
 }
-
-
-
-for (l in 1:mR){
-  cat("Running LDA model",l,"of",mR,"with K =",k,"Iter =",burninNo,"and alpha =",control_LDA_Gibbs$alpha,"\nStarting",as.character(Sys.time()),"...\n")
-  control_LDA_Gibbs$seed<-as.integer(Sys.time())
-  modelobjList[[l]]<-LDA(riksdagDTMclean[-holdoutIndex,], k = k, method = "Gibbs", control = control_LDA_Gibbs)
-  mcmcList[[l]]<-as.mcmc(modelobjList[[l]]@logLiks[(burninNo-chooseLastNo):burninNo])
-  gc()
-}
-
-i<-1
-save(modelobjList,mcmcList,restartNo,
-     file=paste("Models/LDAmod",k[i],"restart",restartNo,".Rdata",sep=""))
-
-
-
-
-
-# Email me when sim is done. 
-# if restarting doesn't work
-# Restart model and save them as restart1...restartn o.s.v.
-
-# Restarting models
-burninNo<-7500
-load("Models/LDAmod50alpha0.01.Rdata")
-startModelList<-modelobjList
-modelobjList<-list()
-mcmcList<-mcmc.list()
-control_LDA_Gibbs <- list(alpha = startModelList[[1]]@alpha, estimate.beta = TRUE, best=TRUE,
-                          verbose = 0, prefix = "testfil", save = 0, keep = 1,
-                          seed = as.integer(Sys.time()), nstart = 1, delta = 0.1,
-                          iter = 1, burnin = burninNo, thin = 1)
-for (l in 1:length(startModelList)){
-  cat("Restarting LDA model",l,"with K =",startModelList[[l]]@k,"Iter =",burninNo," and alpha =",startModelList[[l]]@alpha,", starting",as.character(Sys.time()),"...\n")
-  control_LDA_Gibbs$seed<-as.integer(Sys.time())
-  modelobjList[[l]]<-LDA(riksdagDTMclean[-holdoutIndex,], method = "Gibbs",model=startModelList[[l]], control = control_LDA_Gibbs)
-  mcmcList[[l]]<-as.mcmc(modelobjList[[l]]@logLiks[(burninNo-chooseLastNo):burninNo])
-  gc()
-}
-
-
-
-plot(mcmcList)
-save(modelobjList,mcmcList,file=paste("Models/LDAmod",modelobjList[[1]]@k,"alpha",modelobjList[[1]]@alpha,".Rdata",sep=""))
 
 
 # Estimating models
