@@ -143,7 +143,10 @@ for (i in 1:length(models)){ # j<-i<-k<-1
     k<-models[i]
     modelobjList<-list()
     mcmcList<-mcmc.list()
+<<<<<<< HEAD
     timeToRun<-character(0)
+=======
+>>>>>>> f20877af837178c9a471e42a185b821cc829282c
     control_LDA_Gibbs <- list(alpha = alpha, estimate.beta = TRUE, best=TRUE,
                                verbose = 1000, prefix = "testfil", save = 0, keep = 1,
                                seed = as.integer(Sys.time()), nstart = 1, delta = 0.1,
@@ -151,7 +154,10 @@ for (i in 1:length(models)){ # j<-i<-k<-1
 
     for (l in 1:mR){
       cat("Running LDA model",l,"of",mR,"with N =",dim(riksdagDTMclean)[1],"V =",dim(riksdagDTMclean)[2],"K =",k,"Iter =",burninNo,"and alpha =",control_LDA_Gibbs$alpha,"\nStarting",as.character(Sys.time()),"...\n")
+<<<<<<< HEAD
       timeToRun<-c(timeToRun,as.character(Sys.time()))
+=======
+>>>>>>> f20877af837178c9a471e42a185b821cc829282c
       control_LDA_Gibbs$seed<-as.integer(Sys.time())
       modelobjList[[l]]<-LDA(riksdagDTMclean[-holdoutIndex,], k = k, method = "Gibbs", control = control_LDA_Gibbs)
       mcmcList[[l]]<-as.mcmc(modelobjList[[l]]@logLiks)
